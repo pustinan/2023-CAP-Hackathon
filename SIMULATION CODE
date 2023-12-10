@@ -1,0 +1,64 @@
+import numpy as np
+from scipy.integrate import odeint
+import matplotlib.pyplot as plt
+
+# Constants
+G = 6.67430e-11  # Gravitational constant (m^3 kg^−1 s^−2)
+ME = 5.972e24    # Mass of Earth (kg)
+RE = 6371000     # Radius of Earth (m)
+R = 287.05       # Specific gas constant for dry air (J/(kg·K))
+T0 = 288.15      # Standard temperature at sea level (K)
+P0 = 101325      # Standard pressure at sea level (Pa)
+ν = 5 / 2        # Degrees of freedom for dry air
+
+# Function to calculate temperature as a function of altitude
+def temperature(h):
+    return T0 - (G * ME * h) / ((ν + 1) * R * (RE + h))
+
+# Function to calculate pressure as a function of altitude
+def pressure(h):
+    return P0 * (1 - (ν + 1) * G * ME * h / ((ν + 1) * R * T0 * (RE + h)))**(1 / (ν + 1))
+
+# Function representing the system of differential equations
+def model(y, t, λ):
+    h, h_dot, theta, theta_dot = y
+    P = pressure(h)
+    T = temperature(h)
+    
+    h_double_dot = (λ * P / T) * h_dot**2 - (G * ME) / (h + RE)**2
+    theta_double_dot = -((h + RE) * λ / T) * theta_dot**2
+    
+    return [h_dot, h_double_dot, theta_dot, theta_double_dot]
+
+# Function to simulate the re-entry trajectory
+def simulate_reentry(initial_conditions, time_points, λ):
+    sol = odeint(model, initial_conditions, time_points, args=(λ,))
+    return sol
+
+# Initial conditions
+initial_height = 150000  # Initial altitude above the Earth's surface (m)
+initial_speed = 7500    # Initial speed (m/s)
+initial_theta = 0       # Initial angle (radians)
+initial_angular_speed = 0.1  # Initial angular speed (radians/s)
+
+# Time points for simulation
+time_points = np.linspace(0, 3000, 1000)  # Adjust time range as needed
+
+# Parameter λ, you can adjust this based on your spacecraft characteristics
+λ = 1.0
+
+# Initial state
+initial_state = [initial_height, initial_speed, initial_theta, initial_angular_speed]
+
+# Simulate re-entry trajectory
+solution = simulate_reentry(initial_state, time_points, λ)
+
+# Plotting
+plt.figure(figsize=(10, 6))
+plt.plot(time_points, solution[:, 0] - RE, label='Altitude')
+plt.xlabel('Time (s)')
+plt.ylabel('Altitude (m)')
+plt.title('Re-entry Trajectory')
+plt.legend()
+plt.grid(True)
+plt.show()
